@@ -4,6 +4,8 @@
 #include "jobs.h"
 
 
+int wait_job(void* jobs, int pid, char const* line);
+int fg_pid = 0;
 
 //********************************************
 // function name: ExeCmd
@@ -19,8 +21,9 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 	char* delimiters = " \t\n";
 	int i = 0, num_arg = 0;
 	bool illegal_cmd = FALSE; // illegal command
-	int pid, status;
-    	cmd = strtok(lineSize, delimiters);
+	int pid, id, signum;
+  job_t job_result;
+  cmd = strtok(lineSize, delimiters);
 	if (cmd == NULL)
 		return 0;
    	args[0] = cmd;
@@ -48,9 +51,27 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 	}
 
 	/*************************************************/
-	else if (!strcmp(cmd, "mkdir"))
+	else if (!strcmp(cmd, "kill"))
 	{
+		if(num_arg == 2) {
+			id = atoi(args[2]);
+			job_result = jobs_get_id(id);
+			pid = job_result.pid;
+			if(pid > 0){
+				if(args[1][0] == '-' && ! args[1][1] != '\0') {
+					signum = atoi(args[1] + 1);
+					if(signum>0) {
+						if(!kill(pid, signum)) {
+							// success
+						}
+					} else {
+						
+					}
+				}
+			} else {
 
+			}
+		}
 	}
 	/*************************************************/
 
@@ -66,12 +87,52 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 	/*************************************************/
 	else if (!strcmp(cmd, "fg"))
 	{
-
+      switch(num_arg){
+        case 0:
+          job_result = jobs_get_last(jobs, 0);
+          break;
+        case 1:
+          id = atoi(args[1]);
+          job_result = jobs_get_id(jobs, id);
+          break;
+        default:
+          illegal_cmd = TRUE;
+          break;
+      }
+      if(illegal_cmd != TRUE && job_result.pid > 0) {
+        if(! job_result.running) {
+          kill(job_result.pid, SIGCONT);
+        }
+        strcpy(pwd, job_result.name);
+        jobs_remove(jobs, job_result.id);
+        wait_job(jobs, job_result.pid, pwd);
+      } else {
+        illegal_cmd = TRUE;
+      }
 	}
 	/*************************************************/
 	else if (!strcmp(cmd, "bg"))
 	{
 
+      switch(num_arg){
+        case 0:
+          job_result = jobs_get_last(jobs, 1);
+          break;
+        case 1:
+          id = atoi(args[1]);
+          job_result = jobs_get_id(jobs, id);
+          break;
+        default:
+          illegal_cmd = TRUE;
+          break;
+      }
+      if(illegal_cmd != TRUE && job_result.pid > 0) {
+        if(! job_result.running) {
+          kill(job_result.pid, SIGCONT);
+        }
+      } else {
+        illegal_cmd = TRUE;
+      }
 	}
 	/*************************************************/
 	else if (!strcmp(cmd, "quit"))
@@ -93,25 +154,44 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 		if(pid <= 0)
 			return -1;
 
-		if (waitpid(pid, &status, WUNTRACED) != pid) {
-			perror("Failed waiting for the command");
-			return -1;
-		} else {
-			if(WIFSTOPPED(status))
-				if(jobs_add(jobs, pid, lineSize) < 0) {
-					perror("Failed to add job to list");
-					return -1;
-				}
-		}
+    if(wait_job(jobs, pid, lineSize) < 0)
+      return -1;
 
 	 	return 0;
 	}
+
 	if (illegal_cmd == TRUE)
 	{
 		printf("smash error: > \"%s\"\n", cmdString);
 		return 1;
 	}
     return 0;
+}
+
+int wait_job(void* jobs, int pid, char const* line) {
+  int id, status;
+
+  if(pid <= 0)
+    return -1;
+
+  fg_pid = pid;
+  if (waitpid(pid, &status, WUNTRACED) != pid) {
+	fg_pid = 0;
+    perror("Failed waiting for the command");
+    return -1;
+  } else {
+	fg_pid = 0;
+    if(WIFSTOPPED(status)) {
+      id = jobs_add(jobs, pid, line);
+      if(id < 0) {
+        perror("Failed to add job to list");
+        return -1;
+      } else {
+        return id;
+      }
+    }
+  }
+  return 0;
 }
 //**************************************************************************************
 // function name: ExeExternal

@@ -1,6 +1,6 @@
 #ifndef _COMMANDS_H
 #define _COMMANDS_H
-#include <unistd.h> 
+#include <unistd.h>
 #include <stdio.h>
 #include <time.h>
 #include <stdlib.h>
@@ -14,5 +14,5 @@ typedef enum { FALSE , TRUE } bool;
 int BgCmd(char* lineSize, void* jobs);
 int ExeCmd(void* jobs, char* lineSize, char* cmdString);
 int ExeExternal(char *args[MAX_ARG], char* cmdString);
+extern int fg_pid; // shared with the signal handlers
 #endif
-

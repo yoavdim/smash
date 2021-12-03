@@ -36,7 +36,7 @@ int main(int argc, char *argv[])
 	/* add your code here */
 
 	/************************************/
-
+    set_handlers();
 	/************************************/
 	// Init globals
 
@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 		fgets(lineSize, MAX_LINE_SIZE, stdin);
 		strcpy(cmdString, lineSize);
 		cmdString[strlen(lineSize)-1]='\0';
-					// background command	
+					// background command
 	 	if(!BgCmd(lineSize, jobs)) continue;
 					// built in commands
 		ExeCmd(jobs, lineSize, cmdString);

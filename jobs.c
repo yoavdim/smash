@@ -41,6 +41,9 @@ int jobs_refresh(void *jobs) { // disable signals inside
 
 		if(finished) { // remove
 			printf("%s: pid %d finished. Cleaning\n", __func__, pid);
+      if(! node->next) {
+        list->tail = prev;
+      }
 			if(prev) {
 				prev->next = node->next;
 				free_node(node);
@@ -117,6 +120,55 @@ job_t jobs_get_id(void *jobs, int id) {
 	}
 
 	return zero;
+}
+
+int jobs_remove(void* jobs, int id) {
+	jobs_list_t *list = (jobs_list_t *) jobs;
+	jobs_node_t *prev = NULL;
+	jobs_node_t *node;
+
+  if(jobs_refresh(jobs) < 0){
+    perror("remove failed.");
+    return -1;
+  }
+	node = list->head;
+
+	while(node) {
+
+		if(node->job.id == id) { // remove
+			printf("%s: id %d removed.\n", __func__, id);
+      if(! node->next) {
+        list->tail = prev;
+      }
+			if(prev) {
+				prev->next = node->next;
+				free_node(node);
+				node = prev->next;
+			} else {
+				list->head = node->next;
+				free_node(node);
+				node = list->head;
+			}
+		}
+	}
+  return 0;
+}
+
+job_t jobs_get_last(void *jobs, int only_stopped) {
+  job_t result = {};
+  jobs_node_t *node;
+
+  if(jobs_refresh(jobs) < 0)
+    return result;
+  node =((jobs_list_t *) jobs)->head;
+
+  jobs_foreach(node) {
+    if(only_stopped && ! node->job.running)
+      continue;
+    if(result.id < node->job.id)
+      result = node->job; 
+  }
+  return result;
 }
 
 int jobs_print_all(void *jobs) {
