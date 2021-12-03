@@ -9,6 +9,7 @@ main file. This file contains the main function of smash
 #include <string.h>
 #include <signal.h>
 #include "commands.h"
+#include "jobs.h"
 #include "signals.h"
 #define MAX_LINE_SIZE 80
 #define MAXARGS 20
@@ -40,14 +41,19 @@ int main(int argc, char *argv[])
 	// Init globals
 
 
-
 	L_Fg_Cmd =(char*)malloc(sizeof(char)*(MAX_LINE_SIZE+1));
 	if (L_Fg_Cmd == NULL)
 			exit (-1);
 	L_Fg_Cmd[0] = '\0';
 
-    	while (1)
-    	{
+  jobs = jobs_create();
+  if(!jobs) {
+    perror("failed create\n");
+    free(L_Fg_Cmd);
+    exit(1);
+  }
+  while (1)
+  {
 	 	printf("smash > ");
 		fgets(lineSize, MAX_LINE_SIZE, stdin);
 		strcpy(cmdString, lineSize);

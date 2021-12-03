@@ -12,6 +12,10 @@ void free_node(jobs_node_t *node){
 	}
 }
 
+void* jobs_create() {
+	return calloc(1, sizeof(jobs_list_t));
+}
+
 int jobs_refresh(void *jobs) { // disable signals inside
 	jobs_list_t *list = (jobs_list_t *) jobs;
 	jobs_node_t *prev = NULL;
@@ -57,7 +61,7 @@ int jobs_refresh(void *jobs) { // disable signals inside
 }
 
 // return the id>0 or -1 on fail
-int jobs_add(void *jobs, int pid, char* name) {
+int jobs_add(void *jobs, int pid, char const* name) {
 	jobs_list_t *list;
 	jobs_node_t *node;
 	int old_max_id;
@@ -79,6 +83,7 @@ int jobs_add(void *jobs, int pid, char* name) {
 		return -1;
 	}
 
+  strcpy(name_copy, name);
 	old_max_id = (list->tail)? list->tail->job.id : 0;
 	node->next = NULL;
 	node->job.id = old_max_id + 1;
@@ -120,8 +125,8 @@ int jobs_print_all(void *jobs) {
 	int id, pid;
 	time_t now;
 	double diff;
-	char const* format = "[%d] %s %d %d secs";
-	char const* stopped_format = "[%d] %s %d %d secs (Stopped)";
+	char const* format = "[%d] %s %d %d secs\n";
+	char const* stopped_format = "[%d] %s %d %d secs (Stopped)\n";
 
 	if (jobs_refresh(jobs) < 0)
 		return -1;
