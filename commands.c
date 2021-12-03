@@ -90,8 +90,10 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 	else // external command
 	{
  		pid = ExeExternal(args, cmdString);
-		if(pid <= 0) return -1;
-		if(waitpid(pid, &status, WUNTRACED) != pid){
+		if(pid <= 0)
+			return -1;
+
+		if (waitpid(pid, &status, WUNTRACED) != pid) {
 			perror("Failed waiting for the command");
 			return -1;
 		} else {
@@ -101,6 +103,7 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 					return -1;
 				}
 		}
+
 	 	return 0;
 	}
 	if (illegal_cmd == TRUE)
@@ -161,6 +164,7 @@ int BgCmd(char* lineSize, void* jobs)
 		Command = strtok(lineSize, delimiters);
 		if (Command == NULL)
 			return 0;
+
 	   	args[0] = Command;
 		for (i=1; i<MAX_ARG; i++)
 		{
@@ -168,13 +172,17 @@ int BgCmd(char* lineSize, void* jobs)
 			if (args[i] != NULL)
 				num_arg++;
 		}
+
 		// my code:
-		pid = ExeExternal(args,Command);
+		pid = ExeExternal(args, Command);
 		if(pid > 0){
 			if(jobs_add(jobs, pid, lineSize))
 				return 0;
+			else
+				printf("Failed to add job to queue\n");
+		} else {
+			printf("%s: Failed to run command\n", __func__);
 		}
-
 	}
 	return -1;
 }
