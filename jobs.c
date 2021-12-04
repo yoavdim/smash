@@ -20,7 +20,8 @@ int jobs_refresh(void *jobs) { // disable signals inside
 	jobs_list_t *list = (jobs_list_t *) jobs;
 	jobs_node_t *prev = NULL;
 	jobs_node_t *node;
-	int pid, status;
+	siginfo_t infop = {};
+	int pid;
 	int finished, stopped;
 
 	if(!jobs) {
@@ -35,14 +36,18 @@ int jobs_refresh(void *jobs) { // disable signals inside
 
 		printf("%s: Querying pid %d for stats\n", __func__, pid);
 		// get state:
-		finished = waitpid(pid, &status, WNOHANG||WUNTRACED) == pid;
-		stopped = WIFSTOPPED(status);
+		// WNOWAIT - so that every timme we update the state the wait will return on stopped processes
+		finished  = !waitid(P_PID, pid, &infop, WUNTRACED|WNOWAIT|WEXITED|WNOHANG);
+		finished &= infop.si_pid == pid;
+		stopped   = finished && infop.si_code == CLD_STOPPED;
 		finished &= !stopped;
 
 		if(finished) { // remove
-			printf("%s: pid %d finished. Cleaning\n", __func__, pid);
-      if(! node->next) {
-        list->tail = prev;
+		  if(waitpid(pid, NULL, WNOHANG)!=pid) // the first wait was non-recycling, clean the zommbie
+		  	printf("%s: error: expected to be zommbie\n", __func__);
+		  printf("%s: pid %d finished. Cleaning\n", __func__, pid);
+	      if(! node->next) {
+	        list->tail = prev;
       }
 			if(prev) {
 				prev->next = node->next;
@@ -122,6 +127,7 @@ job_t jobs_get_id(void *jobs, int id) {
 	return zero;
 }
 
+
 int jobs_remove(void* jobs, int id) {
 	jobs_list_t *list = (jobs_list_t *) jobs;
 	jobs_node_t *prev = NULL;
@@ -163,12 +169,58 @@ job_t jobs_get_last(void *jobs, int only_stopped) {
   node =((jobs_list_t *) jobs)->head;
 
   jobs_foreach(node) {
-    if(only_stopped && ! node->job.running)
+    if(only_stopped && node->job.running)
       continue;
     if(result.id < node->job.id)
-      result = node->job; 
+      result = node->job;
   }
   return result;
+}
+
+void jobs_kill_all(void *jobs) {
+	unsigned int time_left = 5;
+	jobs_list_t *list;
+	jobs_node_t *node;
+	int pid;
+
+	jobs_refresh(jobs);
+	list = (jobs_list_t *) jobs;
+	node = list->head;
+	jobs_foreach(node) {
+		pid = node->job.pid;
+		printf("[%d] %s - Sending SIGTERM... ", node->job.id, node->job.name);
+		kill(pid, SIGTERM);
+		if(waitpid(pid,NULL, WNOHANG) == pid) {
+			printf("Done.\n");
+			continue;
+		}
+		if(errno==EINTR) { // try again
+			if(waitpid(pid,NULL, WNOHANG) == pid) {
+				printf("Done.\n");
+				continue;
+			}
+		}
+		do {
+			time_left = sleep(time_left);
+			if(waitpid(pid,NULL, WNOHANG) == pid) {
+				printf("Done.\n");
+				pid = 0; // just flag that we finished
+				break;
+			}
+		} while(time_left);
+		if(! pid)
+			continue;
+		if(waitpid(pid,NULL, WNOHANG) == pid) {
+			printf("Done.\n");
+			continue;
+		} else {
+			printf("(5 sec passed) Sending SIGKILL... ");
+			kill(pid, SIGKILL);
+			while(waitpid(pid, NULL, 0) != pid);
+			printf("Done.\n");
+		}
+	}
+	jobs_refresh(jobs);
 }
 
 int jobs_print_all(void *jobs) {

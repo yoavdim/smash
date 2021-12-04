@@ -53,24 +53,25 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 	/*************************************************/
 	else if (!strcmp(cmd, "kill"))
 	{
-		if(num_arg == 2) {
+		if(num_arg == 2 && args[1][0] == '-' && ! args[1][1] != '\0') {
 			id = atoi(args[2]);
-			job_result = jobs_get_id(id);
+			job_result = jobs_get_id(jobs, id);
 			pid = job_result.pid;
 			if(pid > 0){
-				if(args[1][0] == '-' && ! args[1][1] != '\0') {
-					signum = atoi(args[1] + 1);
-					if(signum>0) {
-						if(!kill(pid, signum)) {
-							// success
-						}
-					} else {
-						
+				signum = atoi(args[1] + 1);
+				if(signum>0) {
+					if(!kill(pid, signum)) {
+						return 0;
 					}
 				}
+				printf("smash error: > kill %d - cannot send signal\n", id);
+				return 1;
 			} else {
-
+				printf("smash error: > kill %d - job does not exist\n", id);
+				return 1;
 			}
+		} else {
+			illegal_cmd = TRUE;
 		}
 	}
 	/*************************************************/
@@ -128,10 +129,13 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
       }
       if(illegal_cmd != TRUE && job_result.pid > 0) {
         if(! job_result.running) {
-          kill(job_result.pid, SIGCONT);
+          if(!kill(job_result.pid, SIGCONT)) {
+			  perror("failed kill in bg");
+		  }
         }
       } else {
         illegal_cmd = TRUE;
+		printf("%d\n", job_result.id);
       }
 	}
 	/*************************************************/
@@ -139,9 +143,10 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 	{
 		if(args[1]) {
 			if(!strcmp(args[1], "kill")) {
-				// do the killing & then exit
+				jobs_kill_all(jobs);
+				exit(0);
 			} else {
-				// error?
+				illegal_cmd = TRUE;
 			}
 		} else {
 			exit(0);
@@ -152,10 +157,10 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 	{
  		pid = ExeExternal(args, cmdString);
 		if(pid <= 0)
-			return -1;
+			return 1;
 
     if(wait_job(jobs, pid, lineSize) < 0)
-      return -1;
+      return 1;
 
 	 	return 0;
 	}
@@ -170,26 +175,36 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 
 int wait_job(void* jobs, int pid, char const* line) {
   int id, status;
+  siginfo_t infop = {};
 
   if(pid <= 0)
     return -1;
 
-  fg_pid = pid;
-  if (waitpid(pid, &status, WUNTRACED) != pid) {
-	fg_pid = 0;
-    perror("Failed waiting for the command");
-    return -1;
-  } else {
-	fg_pid = 0;
-    if(WIFSTOPPED(status)) {
-      id = jobs_add(jobs, pid, line);
-      if(id < 0) {
-        perror("Failed to add job to list");
-        return -1;
-      } else {
-        return id;
-      }
-    }
+  while(1) {
+	  fg_pid = pid;
+	  if (waitid(P_PID, pid, &infop, WUNTRACED|WNOWAIT|WEXITED)) {
+		  if(errno == EINTR)
+		  	continue;
+		fg_pid = 0;
+	    perror("Failed waiting for the command");
+	    return -1;
+	  } else {
+		fg_pid = 0;
+	    if(infop.si_code == CLD_STOPPED) {
+	      id = jobs_add(jobs, pid, line);
+	      if(id <= 0) {
+	        perror("Failed to add job to list");
+	        return -1;
+	      } else {
+	        return id;
+	      }
+	    } else {
+		  // pid was ended and not just stopped, clean it
+		  if(waitpid(pid, NULL, WNOHANG) != pid) {
+			  printf("%s: error: expected to be zommbie\n", __func__);
+		  }
+	    }
+	  }
   }
   return 0;
 }
