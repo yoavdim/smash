@@ -53,7 +53,7 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 	/*************************************************/
 	else if (!strcmp(cmd, "kill"))
 	{
-		if(num_arg == 2 && args[1][0] == '-' && ! args[1][1] != '\0') {
+		if(num_arg == 2 && args[1][0] == '-' && args[1][1] != '\0') {
 			id = atoi(args[2]);
 			job_result = jobs_get_id(jobs, id);
 			pid = job_result.pid;
@@ -102,9 +102,12 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
       }
       if(illegal_cmd != TRUE && job_result.pid > 0) {
         if(! job_result.running) {
-          kill(job_result.pid, SIGCONT);
+		  if(kill(job_result.pid, SIGCONT)) {
+  		    perror("failed kill in bg");
+  		  }
         }
         strcpy(pwd, job_result.name);
+		printf("%s",job_result.name);
         jobs_remove(jobs, job_result.id);
         wait_job(jobs, job_result.pid, pwd);
       } else {
@@ -129,13 +132,14 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
       }
       if(illegal_cmd != TRUE && job_result.pid > 0) {
         if(! job_result.running) {
-          if(!kill(job_result.pid, SIGCONT)) {
+          if(kill(job_result.pid, SIGCONT)) {
 			  perror("failed kill in bg");
+		  } else {
+			  printf("%s",job_result.name);
 		  }
         }
       } else {
         illegal_cmd = TRUE;
-		printf("%d\n", job_result.id);
       }
 	}
 	/*************************************************/
@@ -174,7 +178,7 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 }
 
 int wait_job(void* jobs, int pid, char const* line) {
-  int id, status;
+  int id;
   siginfo_t infop = {};
 
   if(pid <= 0)

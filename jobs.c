@@ -34,7 +34,7 @@ int jobs_refresh(void *jobs) { // disable signals inside
 	while(node) {
 		pid = node->job.pid;
 
-		printf("%s: Querying pid %d for stats\n", __func__, pid);
+		//printf("%s: Querying pid %d for stats\n", __func__, pid);
 		// get state:
 		// WNOWAIT - so that every timme we update the state the wait will return on stopped processes
 		finished  = !waitid(P_PID, pid, &infop, WUNTRACED|WNOWAIT|WEXITED|WNOHANG);
@@ -45,7 +45,7 @@ int jobs_refresh(void *jobs) { // disable signals inside
 		if(finished) { // remove
 		  if(waitpid(pid, NULL, WNOHANG)!=pid) // the first wait was non-recycling, clean the zommbie
 		  	printf("%s: error: expected to be zommbie\n", __func__);
-		  printf("%s: pid %d finished. Cleaning\n", __func__, pid);
+		  //printf("%s: pid %d finished. Cleaning\n", __func__, pid);
 	      if(! node->next) {
 	        list->tail = prev;
       }
@@ -105,8 +105,6 @@ int jobs_add(void *jobs, int pid, char const* name) {
 		list->tail = node;
 	}
 
-	printf("Adding pid %d to job list\n", pid);
-
 	return old_max_id + 1;
 }
 
@@ -142,7 +140,6 @@ int jobs_remove(void* jobs, int id) {
 	while(node) {
 
 		if(node->job.id == id) { // remove
-			printf("%s: id %d removed.\n", __func__, id);
       if(! node->next) {
         list->tail = prev;
       }

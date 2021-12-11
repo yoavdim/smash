@@ -12,7 +12,8 @@ void handler_cntlc(int sig) {
     int pid = fg_pid;
     if(fg_pid > 0) {
         fg_pid = 0;
-        kill(pid, sig);
+        if(kill(pid, sig))
+            perror("failed signal");
     }
 }
 
