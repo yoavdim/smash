@@ -338,7 +338,7 @@ int ExeExternal(char *args[MAX_ARG], char* cmdString)
 			setpgrp();
 
 			// Add your code here (execute an external command)
-			execv(cmdString, args);
+			execv(args[0], args);
 			perror("Failed running an external command");
 			exit(1);
 
