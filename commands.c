@@ -336,8 +336,6 @@ int ExeExternal(char *args[MAX_ARG], char* cmdString)
 			perror("Failed spawning a new process");
 			return -1;
 		case 0 :
-			// Child Process
-			setpgrp();
 
 			// Add your code here (execute an external command)
 			execv(args[0], args);
