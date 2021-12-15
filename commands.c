@@ -313,6 +313,8 @@ int wait_job(void* jobs, int pid, char const* line) {
 				if(waitpid(pid, NULL, WNOHANG) != pid) {
 					printf("%s: error: expected to be zommbie\n", __func__);
 				}
+
+				break;
 			}
 		}
 	}
