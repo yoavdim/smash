@@ -7,13 +7,13 @@
 int wait_job(void* jobs, int pid, char const* line);
 int fg_pid = 0;
 
- //my add
- char last_cd1[MAX_LINE_SIZE];
- char last_cd2[MAX_LINE_SIZE];
- int flag = 0 ;
+//my add
+char last_cd1[MAX_LINE_SIZE];
+char last_cd2[MAX_LINE_SIZE];
+int flag = 0 ;
 
- int ih =0 ;
- char history[50][MAX_LINE_SIZE]; //
+int ih =0 ;
+char history[50][MAX_LINE_SIZE]; //
 
 //********************************************
 // function name: ExeCmd
@@ -23,7 +23,14 @@ int fg_pid = 0;
 //**************************************************************************************
 int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 {
-
+	char* cmd;
+	char* args[MAX_ARG];
+	char pwd[MAX_LINE_SIZE];
+	char* delimiters = " \t\n";
+	int i = 0, num_arg = 0;
+	bool illegal_cmd = FALSE; // illegal command
+	int pid, id, signum;
+	job_t job_result;
 
 	// for history command
 	if(ih<50){
@@ -36,19 +43,10 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 		strcpy(history[49], cmdString);
 	}
 
-
-	char* cmd;
-	char* args[MAX_ARG];
-	char pwd[MAX_LINE_SIZE];
-	char* delimiters = " \t\n";
-	int i = 0, num_arg = 0;
-	bool illegal_cmd = FALSE; // illegal command
-	int pid, id, signum;
-  job_t job_result;
-  cmd = strtok(lineSize, delimiters);
+	cmd = strtok(lineSize, delimiters);
 	if (cmd == NULL)
 		return 0;
-   	args[0] = cmd;
+	args[0] = cmd;
 	for (i=1; i<MAX_ARG; i++)
 	{
 		args[i] = strtok(NULL, delimiters);
@@ -56,11 +54,11 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 			num_arg++;
 
 	}
-/*************************************************/
-// Built in Commands PLEASE NOTE NOT ALL REQUIRED
-// ARE IN THIS CHAIN OF IF COMMANDS. PLEASE ADD
-// MORE IF STATEMENTS AS REQUIRED
-/*************************************************/
+	/*************************************************/
+	// Built in Commands PLEASE NOTE NOT ALL REQUIRED
+	// ARE IN THIS CHAIN OF IF COMMANDS. PLEASE ADD
+	// MORE IF STATEMENTS AS REQUIRED
+	/*************************************************/
 	if (!strcmp(cmd, "cd") )
 	{
 
@@ -74,7 +72,7 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 
 			}else { // ret!=0 ... error
 				printf("smash error: > “%s” – No such file or directory",cmdString);
-                return 1;
+				return 1;
 			}
 		}
 		if(*args[1]=='-'){
@@ -84,13 +82,13 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 				int ret =chdir(last_cd1);
 				strcpy(last_cd1, last_cd2);
 
-			if(ret==0){
-				//printf(" chdir okayy");
-			}
+				if(ret==0){
+					//printf(" chdir okayy");
+				}
 
 			}else{ // last_cd == NULL
 				printf("smash error: > “%s” – No such file or directory",cmdString);
-                return 1;
+				return 1;
 			}
 
 		}
@@ -104,15 +102,15 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 		const char s[2] = "/";
 		getcwd(pwd, MAX_LINE_SIZE);
 
-		   /* get the first token */
+		/* get the first token */
 		token = strtok(pwd, s);
 
-		   /* walk through other tokens */
-			while( token != NULL ) {
+		/* walk through other tokens */
+		while( token != NULL ) {
 
-   			last_token=token;
+			last_token=token;
 			token = strtok(NULL, s);
-			}
+		}
 
 		printf("%s%s\n",s, last_token);
 	}
@@ -155,24 +153,24 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 
 	else if (!strcmp(cmd, "jobs"))
 	{
-			jobs_print_all(jobs);
+		jobs_print_all(jobs);
 	}
 	/*************************************************/
 	else if (!strcmp(cmd, "diff"))
 	{
-	int dif = 0 ;
-	char str1[MAX_LINE_SIZE] ;
-	char str2[MAX_LINE_SIZE] ;
-	FILE * fd1 = fopen(args[1],"r");
+		int dif = 0 ;
+		char str1[MAX_LINE_SIZE] ;
+		char str2[MAX_LINE_SIZE] ;
+		FILE * fd1 = fopen(args[1],"r");
 		if(fd1==NULL){
 			perror("failed in open file");
 			return 1;
 		}
-	FILE * fd2 = fopen(args[2],"r");
+		FILE * fd2 = fopen(args[2],"r");
 		if(fd2==NULL){
 			perror("failed in open file");
 			fclose(fd1);
-            return 1;
+			return 1;
 		}
 		while(fgets(str1, MAX_LINE_SIZE, fd1)){
 			fgets(str2, MAX_LINE_SIZE, fd2);
@@ -184,71 +182,71 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 			dif =1;
 		}
 		printf("%d\n", dif);
-        fclose(fd1);
-        fclose(fd2);
+		fclose(fd1);
+		fclose(fd2);
 	}
 	/*************************************************/
 	else if (!strcmp(cmd, "showpid"))
 	{
- 		int pid = getpid() ;
+		int pid = getpid() ;
 		printf("smash pid is %d\n",pid);
 	}
 	/*************************************************/
 	else if (!strcmp(cmd, "fg"))
 	{
-      switch(num_arg){
-        case 0:
-          job_result = jobs_get_last(jobs, 0);
-          break;
-        case 1:
-          id = atoi(args[1]);
-          job_result = jobs_get_id(jobs, id);
-          break;
-        default:
-          illegal_cmd = TRUE;
-          break;
-      }
-      if(illegal_cmd != TRUE && job_result.pid > 0) {
-        if(! job_result.running) {
-		  if(kill(job_result.pid, SIGCONT)) {
-  		    perror("failed kill in bg");
-  		  }
-        }
-        strcpy(pwd, job_result.name);
-		printf("%s",job_result.name);
-        jobs_remove(jobs, job_result.id);
-        wait_job(jobs, job_result.pid, pwd);
-      } else {
-        illegal_cmd = TRUE;
-      }
+		switch(num_arg){
+			case 0:
+				job_result = jobs_get_last(jobs, 0);
+				break;
+			case 1:
+				id = atoi(args[1]);
+				job_result = jobs_get_id(jobs, id);
+				break;
+			default:
+				illegal_cmd = TRUE;
+				break;
+		}
+		if(illegal_cmd != TRUE && job_result.pid > 0) {
+			if(! job_result.running) {
+				if(kill(job_result.pid, SIGCONT)) {
+					perror("failed kill in bg");
+				}
+			}
+			strcpy(pwd, job_result.name);
+			printf("%s",job_result.name);
+			jobs_remove(jobs, job_result.id);
+			wait_job(jobs, job_result.pid, pwd);
+		} else {
+			illegal_cmd = TRUE;
+		}
 	}
 	/*************************************************/
 	else if (!strcmp(cmd, "bg"))
 	{
 
-      switch(num_arg){
-        case 0:
-          job_result = jobs_get_last(jobs, 1);
-          break;
-        case 1:
-          id = atoi(args[1]);
-          job_result = jobs_get_id(jobs, id);
-          break;
-        default:
-          illegal_cmd = TRUE;
-          break;
-      }
-      if(illegal_cmd != TRUE && job_result.pid > 0) {
-        if(! job_result.running) {
-          if(kill(job_result.pid, SIGCONT)) {
-			  perror("failed kill in bg");
-		  } else {
-			  printf("%s",job_result.name);
-		  }
-        }
-      } else {
-        illegal_cmd = TRUE;
-      }
+		switch(num_arg){
+			case 0:
+				job_result = jobs_get_last(jobs, 1);
+				break;
+			case 1:
+				id = atoi(args[1]);
+				job_result = jobs_get_id(jobs, id);
+				break;
+			default:
+				illegal_cmd = TRUE;
+				break;
+		}
+		if(illegal_cmd != TRUE && job_result.pid > 0) {
+			if(! job_result.running) {
+				if(kill(job_result.pid, SIGCONT)) {
+					perror("failed kill in bg");
+				} else {
+					printf("%s",job_result.name);
+				}
+			}
+		} else {
+			illegal_cmd = TRUE;
+		}
 	}
 	/*************************************************/
 	else if (!strcmp(cmd, "quit"))
@@ -267,14 +265,14 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 	/*************************************************/
 	else // external command
 	{
- 		pid = ExeExternal(args, cmdString);
+		pid = ExeExternal(args, cmdString);
 		if(pid <= 0)
 			return 1;
 
-    if(wait_job(jobs, pid, lineSize) < 0)
-      return 1;
+		if(wait_job(jobs, pid, lineSize) < 0)
+			return 1;
 
-	 	return 0;
+		return 0;
 	}
 
 	if (illegal_cmd == TRUE)
@@ -282,43 +280,43 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 		printf("smash error: > \"%s\"\n", cmdString);
 		return 1;
 	}
-    return 0;
+	return 0;
 }
 
 int wait_job(void* jobs, int pid, char const* line) {
-  int id;
-  siginfo_t infop = {};
+	int id;
+	siginfo_t infop = {};
 
-  if(pid <= 0)
-    return -1;
+	if(pid <= 0)
+		return -1;
 
-  while(1) {
-	  fg_pid = pid;
-	  if (waitid(P_PID, pid, &infop, WUNTRACED|WNOWAIT|WEXITED)) {
-		  if(errno == EINTR)
-		  	continue;
-		fg_pid = 0;
-	    perror("Failed waiting for the command");
-	    return -1;
-	  } else {
-		fg_pid = 0;
-	    if(infop.si_code == CLD_STOPPED) {
-	      id = jobs_add(jobs, pid, line);
-	      if(id <= 0) {
-	        perror("Failed to add job to list");
-	        return -1;
-	      } else {
-	        return id;
-	      }
-	    } else {
-		  // pid was ended and not just stopped, clean it
-		  if(waitpid(pid, NULL, WNOHANG) != pid) {
-			  printf("%s: error: expected to be zommbie\n", __func__);
-		  }
-	    }
-	  }
-  }
-  return 0;
+	while(1) {
+		fg_pid = pid;
+		if (waitid(P_PID, pid, &infop, WUNTRACED|WNOWAIT|WEXITED)) {
+			if(errno == EINTR)
+				continue;
+			fg_pid = 0;
+			perror("Failed waiting for the command");
+			return -1;
+		} else {
+			fg_pid = 0;
+			if(infop.si_code == CLD_STOPPED) {
+				id = jobs_add(jobs, pid, line);
+				if(id <= 0) {
+					perror("Failed to add job to list");
+					return -1;
+				} else {
+					return id;
+				}
+			} else {
+				// pid was ended and not just stopped, clean it
+				if(waitpid(pid, NULL, WNOHANG) != pid) {
+					printf("%s: error: expected to be zommbie\n", __func__);
+				}
+			}
+		}
+	}
+	return 0;
 }
 //**************************************************************************************
 // function name: ExeExternal
@@ -329,24 +327,24 @@ int wait_job(void* jobs, int pid, char const* line) {
 int ExeExternal(char *args[MAX_ARG], char* cmdString)
 {
 	int pID;
-    	switch(pID = fork())
+	switch(pID = fork())
 	{
-    		case -1:
-					// Add your code here (error)
-					perror("Failed spawning a new process");
-					return -1;
-        	case 0 :
-                	// Child Process
-               		setpgrp();
+		case -1:
+			// Add your code here (error)
+			perror("Failed spawning a new process");
+			return -1;
+		case 0 :
+			// Child Process
+			setpgrp();
 
-			        // Add your code here (execute an external command)
-					execv(cmdString, args);
-					perror("Failed running an external command");
-					exit(1);
+			// Add your code here (execute an external command)
+			execv(cmdString, args);
+			perror("Failed running an external command");
+			exit(1);
 
-			default:
-                	// Add your code here
-					return pID;
+		default:
+			// Add your code here
+			return pID;
 	}
 }
 
@@ -372,7 +370,7 @@ int BgCmd(char* lineSize, void* jobs)
 		if (Command == NULL)
 			return 0;
 
-	   	args[0] = Command;
+		args[0] = Command;
 		for (i=1; i<MAX_ARG; i++)
 		{
 			args[i] = strtok(NULL, delimiters);

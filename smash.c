@@ -23,12 +23,12 @@ char lineSize[MAX_LINE_SIZE];
 //**************************************************************************************
 int main(int argc, char *argv[])
 {
-    char cmdString[MAX_LINE_SIZE];
+	char cmdString[MAX_LINE_SIZE];
 
 
 	//signal declaretions
 	//NOTE: the signal handlers and the function/s that sets the handler should be found in siganls.c
-	 /* add your code here */
+	/* add your code here */
 
 	/************************************/
 	//NOTE: the signal handlers and the function/s that sets the handler should be found in siganls.c
@@ -36,36 +36,36 @@ int main(int argc, char *argv[])
 	/* add your code here */
 
 	/************************************/
-    set_handlers();
+	set_handlers();
 	/************************************/
 	// Init globals
 
 
 	L_Fg_Cmd =(char*)malloc(sizeof(char)*(MAX_LINE_SIZE+1));
 	if (L_Fg_Cmd == NULL)
-			exit (-1);
+	exit (-1);
 	L_Fg_Cmd[0] = '\0';
 
-  jobs = jobs_create();
-  if(!jobs) {
-    perror("failed create\n");
-    free(L_Fg_Cmd);
-    exit(1);
-  }
-  while (1)
-  {
-	 	printf("smash > ");
+	jobs = jobs_create();
+	if(!jobs) {
+		perror("failed create\n");
+		free(L_Fg_Cmd);
+		exit(1);
+	}
+	while (1)
+	{
+		printf("smash > ");
 		fgets(lineSize, MAX_LINE_SIZE, stdin);
 		strcpy(cmdString, lineSize);
 		cmdString[strlen(lineSize)-1]='\0';
-					// background command
-	 	if(!BgCmd(lineSize, jobs)) continue;
-					// built in commands
+		// background command
+		if(!BgCmd(lineSize, jobs)) continue;
+		// built in commands
 		ExeCmd(jobs, lineSize, cmdString);
 
 		/* initialize for next line read*/
 		lineSize[0]='\0';
 		cmdString[0]='\0';
 	}
-    return 0;
+	return 0;
 }
