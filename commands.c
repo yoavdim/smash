@@ -298,7 +298,7 @@ int wait_job(void* jobs, int pid, char const* line) {
 		  if(errno == EINTR)
 		  	continue;
 		fg_pid = 0;
-	    //perror("Failed waiting for the command");
+	    perror("Failed waiting for the command");
 	    return -1;
 	  } else {
 		fg_pid = 0;
