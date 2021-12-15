@@ -26,9 +26,9 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 	char* cmd;
 	char* args[MAX_ARG];
 	char pwd[MAX_LINE_SIZE];
-	char* delimiters = " \t\n";
+	char delimiters[] = " \t\n";
 	int i = 0, num_arg = 0;
-	bool illegal_cmd = FALSE; // illegal command
+	bool illegal_cmd = false; // illegal command
 	int pid, id, signum;
 	job_t job_result;
 
@@ -146,7 +146,7 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 				return 1;
 			}
 		} else {
-			illegal_cmd = TRUE;
+			illegal_cmd = true;
 		}
 	}
 	/*************************************************/
@@ -203,10 +203,10 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 				job_result = jobs_get_id(jobs, id);
 				break;
 			default:
-				illegal_cmd = TRUE;
+				illegal_cmd = true;
 				break;
 		}
-		if(illegal_cmd != TRUE && job_result.pid > 0) {
+		if(illegal_cmd != true && job_result.pid > 0) {
 			if(! job_result.running) {
 				if(kill(job_result.pid, SIGCONT)) {
 					perror("failed kill in bg");
@@ -217,7 +217,7 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 			jobs_remove(jobs, job_result.id);
 			wait_job(jobs, job_result.pid, pwd);
 		} else {
-			illegal_cmd = TRUE;
+			illegal_cmd = true;
 		}
 	}
 	/*************************************************/
@@ -233,10 +233,10 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 				job_result = jobs_get_id(jobs, id);
 				break;
 			default:
-				illegal_cmd = TRUE;
+				illegal_cmd = true;
 				break;
 		}
-		if(illegal_cmd != TRUE && job_result.pid > 0) {
+		if(illegal_cmd != true && job_result.pid > 0) {
 			if(! job_result.running) {
 				if(kill(job_result.pid, SIGCONT)) {
 					perror("failed kill in bg");
@@ -245,7 +245,7 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 				}
 			}
 		} else {
-			illegal_cmd = TRUE;
+			illegal_cmd = true;
 		}
 	}
 	/*************************************************/
@@ -256,7 +256,7 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 				jobs_kill_all(jobs);
 				exit(0);
 			} else {
-				illegal_cmd = TRUE;
+				illegal_cmd = true;
 			}
 		} else {
 			exit(0);
@@ -275,7 +275,7 @@ int ExeCmd(void* jobs, char* lineSize, char* cmdString)
 		return 0;
 	}
 
-	if (illegal_cmd == TRUE)
+	if (illegal_cmd == true)
 	{
 		printf("smash error: > \"%s\"\n", cmdString);
 		return 1;
@@ -336,6 +336,8 @@ int ExeExternal(char *args[MAX_ARG], char* cmdString)
 			perror("Failed spawning a new process");
 			return -1;
 		case 0 :
+			// Child Process
+			setpgrp();
 
 			// Add your code here (execute an external command)
 			execv(args[0], args);
@@ -358,7 +360,7 @@ int BgCmd(char* lineSize, void* jobs)
 {
 
 	char* Command;
-	char* delimiters = " \t\n";
+	char delimiters[] = " \t\n";
 	char *args[MAX_ARG];
 	int i = 0, num_arg = 0;
 	int pid;
