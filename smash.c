@@ -55,7 +55,18 @@ int main(int argc, char *argv[])
 	while (1)
 	{
 		printf("smash > ");
-		fgets(lineSize, MAX_LINE_SIZE, stdin);
+
+		if (!fgets(lineSize, MAX_LINE_SIZE, stdin)) {
+			if (!ferror(stdin)) {
+				printf("\nstdin is closed. Existing shell\n");
+				break;
+			}
+			/* If we haven't taken last condition, then we had an
+			 * error when reading the command
+			 */
+			goto loop_end;
+		}
+
 		strcpy(cmdString, lineSize);
 		cmdString[strlen(lineSize)-1]='\0';
 		// background command
@@ -63,6 +74,7 @@ int main(int argc, char *argv[])
 		// built in commands
 		ExeCmd(jobs, lineSize, cmdString);
 
+loop_end:
 		/* initialize for next line read*/
 		lineSize[0]='\0';
 		cmdString[0]='\0';
